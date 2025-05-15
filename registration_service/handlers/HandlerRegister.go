@@ -56,6 +56,7 @@ func HandleRegister(d amqp.Delivery, ch *amqp.Channel) {
 	res.Status = "ok"
 	res.Message = "Institution registered successfully"
 	publishReply(ch, d, res)
+	return
 }
 
 func publishReply(ch *amqp.Channel, d amqp.Delivery, res Response) {
