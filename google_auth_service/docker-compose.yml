@@ -12,7 +12,7 @@ services:
 
   google_auth_service:
     build: .
-    container_name: google_auth_service
+    container_name: google_auth_service_app
     ports:
       - "8086:8086"
     depends_on:
