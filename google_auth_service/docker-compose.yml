@@ -19,3 +19,10 @@ services:
       - rabbitmq
     environment:
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - GOOGLE_CLIENT_ID=REDACTED
+      - GOOGLE_CLIENT_SECRET=REDACTED
+      - GOOGLE_REDIRECT_URL=http://localhost:8086/auth/google/callback
+      - JWT_SECRET=${JWT_SECRET}
+      - UMS_URL=http://user_management_service:8082
+    env_file:
+      - .env
