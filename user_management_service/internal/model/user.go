@@ -10,4 +10,5 @@ type User struct {
 	StudentID    string // optional school ID for students
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+	Institution  string //for instructors
 }

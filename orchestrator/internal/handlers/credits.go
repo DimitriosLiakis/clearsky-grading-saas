@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"orchestrator/internal/middleware"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -50,13 +52,6 @@ type AvailableResp struct {
 func HandleCreditsAvail(c *gin.Context, ch *amqp.Channel) {
 	log.Printf("We made the API CALL")
 	var req AvailableReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, AvailableResp{
-			Status:      "error",
-			ErrorDetail: err.Error(),
-		})
-		return
-	}
 
 	replyQ, err := ch.QueueDeclare(
 		"",    // name: empty → broker generates one
@@ -93,6 +88,7 @@ func HandleCreditsAvail(c *gin.Context, ch *amqp.Channel) {
 		return
 	}
 
+	req.Name = middleware.GetInstitution(c)
 	corrID := uuid.New().String()
 	reqBody, _ := json.Marshal(req)
 
@@ -152,13 +148,13 @@ func HandleCreditsAvail(c *gin.Context, ch *amqp.Channel) {
 }
 
 // this function will be used after uploaded final grades.
-func HandleCreditsSpent(ch *amqp.Channel) error {
+func HandleCreditsSpent(c *gin.Context, ch *amqp.Channel) error {
 	type Payload struct {
 		Name   string  `json:"name"`
 		Amount float64 `json:"amount"`
 	}
 	body := Payload{
-		Name:   "NTUA",
+		Name:   middleware.GetInstitution(c),
 		Amount: 1,
 	}
 	jsonbody, err := json.Marshal(body)

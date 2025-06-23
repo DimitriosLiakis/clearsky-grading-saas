@@ -242,7 +242,7 @@ func UploadExcelFinal(c *gin.Context, ch *amqp.Channel) {
 			}
 
 			log.Println("[UploadExcelFinal] Calling HandleCreditsSpent...")
-			if err := HandleCreditsSpent(ch); err != nil { //update credits ms
+			if err := HandleCreditsSpent(c, ch); err != nil { //update credits ms
 				log.Printf("[UploadExcelFinal] Failed to publish credits spent: %v\n", err)
 				c.JSON(http.StatusInternalServerError, gin.H{
 					"status":  "error",

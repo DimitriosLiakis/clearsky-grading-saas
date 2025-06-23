@@ -13,10 +13,11 @@ import (
 var jwtKey = []byte(os.Getenv("JWT_SECRET"))
 
 type Claims struct {
-	UserID    string `json:"user_id"`
-	Username  string `json:"username,omitempty"`
-	Role      string `json:"role"`
-	StudentID string `json:"student_id,omitempty"` // Add student_id field
+	UserID      string `json:"user_id"`
+	Username    string `json:"username,omitempty"`
+	Role        string `json:"role"`
+	StudentID   string `json:"student_id,omitempty"` // Add student_id field
+	Institution string `json:"institution"`
 	jwt.RegisteredClaims
 }
 
@@ -51,6 +52,7 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		c.Set("username", claims.Username) // Add username to context
 		c.Set("role", claims.Role)
 		c.Set("student_id", claims.StudentID) // Set student_id in context
+		c.Set("institution", claims.Institution)
 
 		c.Next()
 	}
@@ -98,4 +100,11 @@ func RequireStudentID() gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+func GetInstitution(c *gin.Context) string {
+	if institution, exists := c.Get("institution"); exists && institution != nil {
+		return institution.(string)
+	}
+	return ""
 }

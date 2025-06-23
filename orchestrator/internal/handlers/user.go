@@ -77,10 +77,11 @@ func rpcRequest(ch *amqp.Channel, exchange, routingKey string, reqBody interface
 // User Registration
 func HandleUserRegister(c *gin.Context, ch *amqp.Channel) {
 	var req struct {
-		Username  string `json:"username" binding:"required"`
-		Password  string `json:"password" binding:"required"`
-		Role      string `json:"role,omitempty"`
-		StudentID string `json:"student_id,omitempty"` // Add student_id field
+		Username    string `json:"username" binding:"required"`
+		Password    string `json:"password" binding:"required"`
+		Role        string `json:"role,omitempty"`
+		StudentID   string `json:"student_id,omitempty"` // Add student_id field
+		Institution string `json:"institution"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Printf("[Register] Invalid request: %v", err)
@@ -102,11 +103,12 @@ func HandleUserRegister(c *gin.Context, ch *amqp.Channel) {
 	log.Printf("[Register] Registering user: %s with role: %s, student_id: %s", req.Username, req.Role, req.StudentID)
 
 	payload := map[string]interface{}{
-		"type":       "register",
-		"username":   req.Username,
-		"password":   req.Password,
-		"role":       req.Role,
-		"student_id": req.StudentID, // Include student_id in payload
+		"type":        "register",
+		"username":    req.Username,
+		"password":    req.Password,
+		"role":        req.Role,
+		"student_id":  req.StudentID, // Include student_id in payload
+		"institution": req.Institution,
 	}
 	resp, err := rpcRequest(ch, "", "auth.request", payload)
 	if err != nil {
