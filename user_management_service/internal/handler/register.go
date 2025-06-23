@@ -12,10 +12,11 @@ import (
 
 // Struct για το request σώμα
 type RegisterRequest struct {
-	Username  string `json:"username" binding:"omitempty"`
-	Password  string `json:"password" binding:"required,min=6"`
-	Role      string `json:"role" binding:"required,oneof=student instructor institution_representative"`
-	StudentID string `json:"student_id,omitempty"` // Add student_id field
+	Username    string `json:"username" binding:"omitempty"`
+	Password    string `json:"password" binding:"required,min=6"`
+	Role        string `json:"role" binding:"required,oneof=student instructor institution_representative"`
+	StudentID   string `json:"student_id,omitempty"` // Add student_id field
+	Institution string `json:"institution"`
 }
 
 // Handler function
@@ -63,6 +64,7 @@ func Register(db *gorm.DB) gin.HandlerFunc {
 			PasswordHash: string(hashedPassword),
 			Role:         req.Role,
 			StudentID:    req.StudentID, // Set student_id
+			Institution:  req.Institution,
 		}
 
 		if err := db.Create(&user).Error; err != nil {
