@@ -2,12 +2,12 @@ import { request } from './_request.js';
 
 /**
  * Register a new user.
- * @param {{ username: string, password: string, role: string, student_id?: string }} payload
+ * @param {{ username: string, password: string, role: string, student_id?: string, institution_id?: string }} payload
  */
-export const registerUser = ({ username, password, role, student_id }) =>
+export const registerUser = ({ username, password, role, student_id, institution_id }) =>
   request('/user/register', {
     method: 'POST',
-    body  : { username, password, role, student_id }
+    body  : { username, password, role, student_id, institution_id }
   }).then(response => {
     if (response.error) throw new Error(response.error);
     return response;

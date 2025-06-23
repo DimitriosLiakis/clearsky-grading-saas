@@ -4,11 +4,14 @@ import { registerUser, changePassword } from '../../api/users.js';
 const form            = document.querySelector('#user-mgmt-form');
 const roleSelect      = document.querySelector('#role');
 const studentIdGroup  = document.querySelector('#student-id-group');
+const institutionIdGroup  = document.querySelector('#institution-id-group');
 
-// Show/hide Student ID field
+// Show/hide ID fields based on role
 roleSelect.addEventListener('change', () => {
   studentIdGroup.style.display =
     roleSelect.value === 'student' ? 'block' : 'none';
+  institutionIdGroup.style.display =
+    roleSelect.value === 'institution_representative' ? 'block' : 'none';
 });
 
 // Add user handler
@@ -21,16 +24,29 @@ form.addEventListener('submit', async e => {
   const student_id = role === 'student'
     ? form.student_id.value.trim()
     : undefined;
+  const institution_id = role === 'institution_representative'
+    ? form.institution_id.value.trim()
+    : undefined;
 
   if (!username || !password) {
     return flash('Username and password are required');
   }
 
+  // Validate role-specific fields
+  if (role === 'student' && !student_id) {
+    return flash('Student ID is required for student registration');
+  }
+  
+  if (role === 'institution_representative' && !institution_id) {
+    return flash('Institution ID is required for institution representative registration');
+  }
+
   try {
-    await registerUser({ username, password, role, student_id });
+    await registerUser({ username, password, role, student_id, institution_id });
     flash('User added!');
     form.reset();
     studentIdGroup.style.display = 'none';
+    institutionIdGroup.style.display = 'none';
   } catch (err) {
     flash(`Error: ${err.message}`);
   }

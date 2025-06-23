@@ -36,6 +36,11 @@
           <input id="student_id" name="student_id" type="text" placeholder="e.g. 031200000" />
         </div>
 
+        <div class="form-group" id="institution-id-group" style="display:none;">
+          <label for="institution_id">Institution&nbsp;ID</label>
+          <input id="institution_id" name="institution_id" type="text" placeholder="e.g. NTUA" />
+        </div>
+
         <div class="form-group form-group--button" style="display:flex;gap:0.5rem;">
           <button class="button" type="submit">Add user</button>
         </div>
@@ -71,5 +76,28 @@
   </main>
 
   <script type="module" src="/js/institution/user-management.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const roleSelect = document.getElementById('role');
+      const studentIdGroup = document.getElementById('student-id-group');
+      const institutionIdGroup = document.getElementById('institution-id-group');
+      
+      roleSelect.addEventListener('change', function() {
+        // Hide both fields initially
+        studentIdGroup.style.display = 'none';
+        institutionIdGroup.style.display = 'none';
+        
+        // Show appropriate field based on role
+        if (this.value === 'student') {
+          studentIdGroup.style.display = 'block';
+        } else if (this.value === 'institution_representative') {
+          institutionIdGroup.style.display = 'block';
+        }
+      });
+      
+      // Trigger the change event on page load to set initial state
+      roleSelect.dispatchEvent(new Event('change'));
+    });
+  </script>
 </body>
 </html>

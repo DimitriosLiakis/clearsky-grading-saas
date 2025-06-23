@@ -1,7 +1,24 @@
 import { flash } from '../../script.js';
-import { purchaseCredits } from '../../api/credits.js';
+import { purchaseCredits, getMyCredits } from '../../api/credits.js';
 
 console.log('🛠️ purchase.js loaded');
+
+// Load and display current credits
+async function loadCurrentCredits() {
+  try {
+    const creditsData = await getMyCredits();
+    const creditsDisplay = document.getElementById('current-credits');
+    if (creditsDisplay) {
+      creditsDisplay.textContent = creditsData.credits || '0';
+    }
+  } catch (err) {
+    console.error('🛠️ Failed to load credits:', err);
+    flash('Could not load current credit balance');
+  }
+}
+
+// Load credits on page load
+document.addEventListener('DOMContentLoaded', loadCurrentCredits);
 
 const form = document.querySelector('#purchase-form');
 if (!form) {
@@ -11,12 +28,12 @@ if (!form) {
     e.preventDefault();
     console.log('🛠️ submit event fired');
 
-    const instName = form.instName.value.trim();
     const amount = Number(form.amount.value);
-    console.log('🛠️ form values:', { instName, amount });
+    console.log('🛠️ form values:', { amount });
 
     try {
-      const response = await purchaseCredits({ name: instName, amount });
+      // Institution name now comes from JWT on the server side
+      const response = await purchaseCredits({ amount });
       console.log('🛠️ API response:', response);
 
       // orchestrator now returns { status, message }
@@ -25,6 +42,10 @@ if (!form) {
       } else {
         flash('Purchased successfully!');
       }
+
+      // Refresh credits display after purchase
+      loadCurrentCredits();
+
     } catch (err) {
       console.error('🛠️ purchaseCredits error:', err);
       flash(err.message || 'Purchase failed');
