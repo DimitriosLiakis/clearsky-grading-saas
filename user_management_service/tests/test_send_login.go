@@ -22,11 +22,12 @@ func main() {
 	defer ch.Close()
 
 	loginReq := map[string]string{
-		"type":       "register",
-		"username":   "student2@example.com",
-		"password":   "mypassword123",
-		"role":       "student",
-		"student_id": "STU2024001", // Add student_id for testing
+		"type":           "register",
+		"username":       "student2@example.com",
+		"password":       "mypassword123",
+		"role":           "student",
+		"student_id":     "STU2024001", // Add student_id for testing
+		"institution_id": "",           // Add institution_id (empty for student)
 	}
 	body, _ := json.Marshal(loginReq)
 

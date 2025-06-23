@@ -6,10 +6,11 @@ import (
 
 type User struct {
 	gorm.Model
-	Email     string `gorm:"unique;not null"`
-	Name      string
-	Picture   string
-	Provider  string `gorm:"default:'google'"`
-	Role      string `gorm:"default:'institution_representative'"`
-	StudentID string `gorm:"unique"`
+	Email         string `gorm:"unique;not null"`
+	Name          string
+	Picture       string
+	Provider      string `gorm:"default:'google'"`
+	Role          string `gorm:"default:'institution_representative'"`
+	StudentID     string `gorm:"unique"`
+	InstitutionID string `gorm:"index"` // Add institution_id field
 }

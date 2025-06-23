@@ -77,11 +77,12 @@ func rpcRequest(ch *amqp.Channel, exchange, routingKey string, reqBody interface
 // User Registration
 func HandleUserRegister(c *gin.Context, ch *amqp.Channel) {
 	var req struct {
-		Username    string `json:"username" binding:"required"`
-		Password    string `json:"password" binding:"required"`
-		Role        string `json:"role,omitempty"`
-		StudentID   string `json:"student_id,omitempty"` // Add student_id field
-		Institution string `json:"institution"`
+		Username      string `json:"username" binding:"required"`
+		Password      string `json:"password" binding:"required"`
+		Role          string `json:"role,omitempty"`
+		StudentID     string `json:"student_id,omitempty"`     // Add student_id field
+		InstitutionID string `json:"institution_id,omitempty"` // Add institution_id field
+		Institution   string `json:"institution"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		log.Printf("[Register] Invalid request: %v", err)
@@ -100,15 +101,23 @@ func HandleUserRegister(c *gin.Context, ch *amqp.Channel) {
 		return
 	}
 
-	log.Printf("[Register] Registering user: %s with role: %s, student_id: %s", req.Username, req.Role, req.StudentID)
+	// Validate institution_id for institution representatives
+	if req.Role == "institution_representative" && req.InstitutionID == "" {
+		log.Printf("[Register] Institution ID required for institution representative role")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Institution ID is required for institution representative registration"})
+		return
+	}
+
+	log.Printf("[Register] Registering user: %s with role: %s, student_id: %s, institution_id: %s", req.Username, req.Role, req.StudentID, req.InstitutionID)
 
 	payload := map[string]interface{}{
-		"type":        "register",
-		"username":    req.Username,
-		"password":    req.Password,
-		"role":        req.Role,
-		"student_id":  req.StudentID, // Include student_id in payload
-		"institution": req.Institution,
+		"type":           "register",
+		"username":       req.Username,
+		"password":       req.Password,
+		"role":           req.Role,
+		"student_id":     req.StudentID,     // Include student_id in payload
+		"institution_id": req.InstitutionID, // Include institution_id in payload
+		"institution":    req.Institution,
 	}
 	resp, err := rpcRequest(ch, "", "auth.request", payload)
 	if err != nil {

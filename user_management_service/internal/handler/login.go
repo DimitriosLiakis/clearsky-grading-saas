@@ -35,7 +35,7 @@ func Login(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		token, err := jwtutil.GenerateToken(user.ID, user.Username, user.Role, user.StudentID)
+		token, err := jwtutil.GenerateToken(user.ID, user.Username, user.Role, user.StudentID, user.InstitutionID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
 			return

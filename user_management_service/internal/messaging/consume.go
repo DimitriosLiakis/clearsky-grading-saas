@@ -15,13 +15,14 @@ import (
 )
 
 type AuthRequest struct {
-	Type        string `json:"type"` // "register" ή "login"
-	Username    string `json:"username,omitempty"`
-	Password    string `json:"password,omitempty"`
-	Role        string `json:"role,omitempty"`
-	StudentID   string `json:"student_id,omitempty"` // Add student_id field
-	OldPassword string `json:"old_password,omitempty"`
-	NewPassword string `json:"new_password,omitempty"`
+	Type          string `json:"type"` // "register" ή "login"
+	Username      string `json:"username,omitempty"`
+	Password      string `json:"password,omitempty"`
+	Role          string `json:"role,omitempty"`
+	StudentID     string `json:"student_id,omitempty"`     // Add student_id field
+	InstitutionID string `json:"institution_id,omitempty"` // Add institution_id field
+	OldPassword   string `json:"old_password,omitempty"`
+	NewPassword   string `json:"new_password,omitempty"`
 }
 
 type AuthResponse struct {
@@ -67,6 +68,12 @@ func ConsumeAuthQueue(db *gorm.DB) {
 					goto send
 				}
 
+				// Check if institution_id is required for institution representatives
+				if role == "institution_representative" && req.InstitutionID == "" {
+					resp = AuthResponse{Status: "error", Message: "Institution ID required for institution representative registration"}
+					goto send
+				}
+
 				var existing model.User
 				if err := db.Where("username = ?", req.Username).First(&existing).Error; err == nil {
 					resp = AuthResponse{Status: "error", Message: "Username already registered"}
@@ -82,11 +89,12 @@ func ConsumeAuthQueue(db *gorm.DB) {
 
 					hash, _ := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 					user := model.User{
-						ID:           uuid.NewString(),
-						Username:     req.Username,
-						PasswordHash: string(hash),
-						Role:         role,
-						StudentID:    req.StudentID, // Set student_id
+						ID:            uuid.NewString(),
+						Username:      req.Username,
+						PasswordHash:  string(hash),
+						Role:          role,
+						StudentID:     req.StudentID,     // Set student_id
+						InstitutionID: req.InstitutionID, // Set institution_id
 					}
 					if err := db.Create(&user).Error; err != nil {
 						resp = AuthResponse{Status: "error", Message: "Failed to create user"}
@@ -110,7 +118,7 @@ func ConsumeAuthQueue(db *gorm.DB) {
 				if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 					resp = AuthResponse{Status: "error", Message: "Invalid credentials"}
 				} else {
-					token, err := jwt.GenerateToken(user.ID, user.Username, user.Role, user.StudentID)
+					token, err := jwt.GenerateToken(user.ID, user.Username, user.Role, user.StudentID, user.InstitutionID)
 					if err != nil {
 						resp = AuthResponse{Status: "error", Message: "Token generation failed"}
 					} else {

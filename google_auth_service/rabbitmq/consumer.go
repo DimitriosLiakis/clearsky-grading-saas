@@ -100,16 +100,20 @@ func StartGoogleAuthConsumer() {
 				}
 
 				var studentID string
+				var institutionID string
 				if result.Error != nil {
 					// Create new user - only assign student_id if role is student
 					if role == "student" {
 						studentID = generateStudentID()
+					} else if role == "institution_representative" {
+						institutionID = "NTUA" // Default institution ID
 					}
 					user = database.User{
-						Email:     email,
-						Role:      role,
-						StudentID: studentID,
-						Provider:  "google",
+						Email:         email,
+						Role:          role,
+						StudentID:     studentID,
+						InstitutionID: institutionID,
+						Provider:      "google",
 					}
 					database.DB.Create(&user)
 				} else {
@@ -122,10 +126,18 @@ func StartGoogleAuthConsumer() {
 							database.DB.Save(&user)
 						}
 					}
+					// Set default institution_id if not set and user is representative
+					if user.Role == "institution_representative" {
+						if user.InstitutionID == "" {
+							user.InstitutionID = "NTUA"
+							database.DB.Save(&user)
+						}
+						institutionID = user.InstitutionID
+					}
 				}
 
 				userIDStr := strconv.Itoa(int(user.ID))
-				token, _ := utils.GenerateJWT(userIDStr, email, role, studentID)
+				token, _ := utils.GenerateJWT(userIDStr, email, role, studentID, institutionID)
 				resp.Status = "ok"
 				resp.Token = token
 				resp.Email = email

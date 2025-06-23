@@ -13,11 +13,12 @@ import (
 var jwtKey = []byte(os.Getenv("JWT_SECRET"))
 
 type Claims struct {
-	UserID      string `json:"user_id"`
-	Username    string `json:"username,omitempty"`
-	Role        string `json:"role"`
-	StudentID   string `json:"student_id,omitempty"` // Add student_id field
-	Institution string `json:"institution"`
+	UserID        string `json:"user_id"`
+	Username      string `json:"username,omitempty"`
+	Role          string `json:"role"`
+	StudentID     string `json:"student_id,omitempty"`     // Add student_id field
+	InstitutionID string `json:"institution_id,omitempty"` // Add institution_id field
+	Institution   string `json:"institution"`
 	jwt.RegisteredClaims
 }
 
@@ -51,7 +52,8 @@ func JWTAuthMiddleware() gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("username", claims.Username) // Add username to context
 		c.Set("role", claims.Role)
-		c.Set("student_id", claims.StudentID) // Set student_id in context
+		c.Set("student_id", claims.StudentID)         // Set student_id in context
+		c.Set("institution_id", claims.InstitutionID) // Set institution_id in context
 		c.Set("institution", claims.Institution)
 
 		c.Next()
@@ -87,8 +89,19 @@ func GetStudentID(c *gin.Context) string {
 	return ""
 }
 
+func GetInstitutionID(c *gin.Context) string {
+	if institutionID, exists := c.Get("institution_id"); exists && institutionID != nil {
+		return institutionID.(string)
+	}
+	return ""
+}
+
 func IsStudent(c *gin.Context) bool {
 	return GetRole(c) == "student"
+}
+
+func IsInstitutionRepresentative(c *gin.Context) bool {
+	return GetRole(c) == "institution_representative"
 }
 
 func RequireStudentID() gin.HandlerFunc {
@@ -102,9 +115,13 @@ func RequireStudentID() gin.HandlerFunc {
 	}
 }
 
-func GetInstitution(c *gin.Context) string {
-	if institution, exists := c.Get("institution"); exists && institution != nil {
-		return institution.(string)
+func RequireInstitutionID() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if IsInstitutionRepresentative(c) && GetInstitutionID(c) == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Institution ID is required for this operation"})
+			c.Abort()
+			return
+		}
+		c.Next()
 	}
-	return ""
 }

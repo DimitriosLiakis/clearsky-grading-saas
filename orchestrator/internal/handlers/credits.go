@@ -88,7 +88,7 @@ func HandleCreditsAvail(c *gin.Context, ch *amqp.Channel) {
 		return
 	}
 
-	req.Name = middleware.GetInstitution(c)
+	req.Name = middleware.GetInstitutionID(c)
 	corrID := uuid.New().String()
 	reqBody, _ := json.Marshal(req)
 
@@ -154,7 +154,7 @@ func HandleCreditsSpent(c *gin.Context, ch *amqp.Channel) error {
 		Amount float64 `json:"amount"`
 	}
 	body := Payload{
-		Name:   middleware.GetInstitution(c),
+		Name:   middleware.GetInstitutionID(c),
 		Amount: 1,
 	}
 	jsonbody, err := json.Marshal(body)

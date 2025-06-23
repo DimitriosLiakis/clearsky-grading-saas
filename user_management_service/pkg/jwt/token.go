@@ -10,22 +10,24 @@ import (
 var jwtKey = []byte(os.Getenv("JWT_SECRET")) // Μπορείς να το φορτώνεις από env
 
 type Claims struct {
-	UserID    string `json:"user_id"`
-	Username  string `json:"username"`
-	Role      string `json:"role"`
-	StudentID string `json:"student_id,omitempty"`
+	UserID        string `json:"user_id"`
+	Username      string `json:"username"`
+	Role          string `json:"role"`
+	StudentID     string `json:"student_id,omitempty"`
+	InstitutionID string `json:"institution_id,omitempty"` // Add institution_id field
 	jwt.RegisteredClaims
 }
 
 // GenerateToken issues a JWT with username instead of email
-func GenerateToken(userID, username, role, studentID string) (string, error) {
+func GenerateToken(userID, username, role, studentID, institutionID string) (string, error) {
 	expirationTime := time.Now().Add(24 * time.Hour)
 
 	claims := &Claims{
-		UserID:    userID,
-		Username:  username,
-		Role:      role,
-		StudentID: studentID,
+		UserID:        userID,
+		Username:      username,
+		Role:          role,
+		StudentID:     studentID,
+		InstitutionID: institutionID, // Include institution_id in token
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},

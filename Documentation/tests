@@ -1,0 +1,77 @@
+Here’s what happens end-to-end in each case, combining the Google-OAuth service (GAS) and the User-Management service (UMS):
+
+First-time Google login as STUDENT
+
+Browser → GET /auth/google/login?role=student on GAS
+• GAS builds a state token “student” and redirects to Google’s consent screen.
+User consents, Google → redirect back to /auth/google/callback?code=…&state=student
+GAS exchanges code for Google token, calls tokeninfo → extracts email.
+GAS GenerateJWT(userID=new-UUID, email, role=“student”) → sets HttpOnly cookie.
+GAS SQLite: DB.First(email) fails → Create new record in GAS’s users table.
+GAS PublishLoginEvent → emits a {"event":"user_logged_in","email":…} to clearsky.events.
+GAS POST /upsert to UMS with {email, role} → UMS.UpsertUser:
+• No existing UMS record → create new UMS user (ID=UUID, role=student).
+Browser now holds JWT cookie and can call protected routes on GAS or use UMS token API separately.
+First-time Google login as INSTRUCTOR or INSTITUTION_REPRESENTATIVE
+– Exactly the same flow, except:
+• Client uses /auth/google/login?role=instructor or …?role=institution_representative.
+• GAS normalizes the state, issues JWT with that role, creates GAS user record with Provider=“google.”
+• UMS.UpsertUser creates a UMS user entry with the given role (instructor or institution_representative).
+
+Subsequent Google login (student or instructor/rep)
+
+Same redirect + callback + JWT issuance.
+GAS SQLite: DB.First(email) succeeds this time → no new GAS user record.
+GAS still publishes the login event.
+GAS POST /upsert to UMS → UMS.UpsertUser sees existing record:
+• If role unchanged and no student_id passed, it simply returns OK.
+• If you passed a new role or student_id query-param in login URL, it updates that field.
+Browser receives fresh JWT cookie.
+In all cases the JWT in the cookie lets you hit /protected on GAS or, if you pull it out and use Authorization: Bearer <token>, call /auth/validate or /profile on UMS to fetch user_id, email, role.
+
+
+
+Yes—after the last changes you have two fully working flows:
+
+Username/password
+• POST to UMS /register → creates a user
+• POST to UMS /login → returns a JWT in JSON
+
+Google OAuth
+• GET GAS /auth/google/login → redirect to Google
+• GET GAS /auth/google/callback → issues JWT cookie, upserts into UMS via /upsert, publishes event
+• GET GAS /auth/logout → clears the cookie
+
+Once you’ve got a JWT (either from UMS JSON or GAS cookie), you can call protected endpoints:
+• UMS: Authorization: Bearer <token> → /auth/validate or /auth/profile
+• GAS: cookie-guarded /protected
+
+
+
+
+
+
+
+
+Here’s where we stand and what’s still outstanding:
+
+• User-Management Service
+– Implements HTTP endpoints for register, login, upsert, validate and profile, plus RPC handlers over RabbitMQ for orchestrator.
+– Issues HS256 JWTs (via JWT_SECRET env var) carrying user_id, email and role.
+– Supports change-password via RPC.
+
+• Google-Auth Service
+– Implements full OAuth2 web flow and RPC login.google handler, issues cookie-based JWTs (same secret).
+– Upserts into UMS after login.
+
+• Orchestrator
+– Hosts HTTP façade grouped by role, uses its own JWT-middleware (copied from UMS pkg/jwt).
+– Forwards stateless RPC to downstream microservices over RabbitMQ.
+
+What’s missing:
+
+Ensure JWT_SECRET is set in all Docker-Compose services (UMS, GAS, Orchestrator).
+Front-end needs to call /auth/validate and /auth/profile (currently only register/login are proxied) or have the orchestrator proxy those.
+Front-end “Login with Google” should include the ?role= query param on first-time logins.
+Error pages/CORS config to allow the SPA origin to talk to both UMS (JSON auth) and GAS (cookie auth).
+Documentation reminder: add .env template listing JWT_SECRET, GOOGLE_CLIENT_ID, etc.

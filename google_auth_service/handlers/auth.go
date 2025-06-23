@@ -120,15 +120,20 @@ func GoogleCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	result := database.DB.First(&user, "email = ?", email)
 
 	var studentID string
+	var institutionID string
 	if result.Error != nil {
-		// Create new user - no student_id for representatives
+		// Create new user - set default institution_id for representatives
+		if role == "institution_representative" {
+			institutionID = "NTUA" // Default institution ID
+		}
 		user = database.User{
-			Email:     email,
-			Name:      name,
-			Picture:   picture,
-			Provider:  "google",
-			Role:      role,
-			StudentID: studentID, // Will be empty for representatives
+			Email:         email,
+			Name:          name,
+			Picture:       picture,
+			Provider:      "google",
+			Role:          role,
+			StudentID:     studentID,     // Will be empty for representatives
+			InstitutionID: institutionID, // Set to "NTUA" for representatives
 		}
 		database.DB.Create(&user)
 	} else {
@@ -142,16 +147,24 @@ func GoogleCallbackHandler(w http.ResponseWriter, r *http.Request) {
 				user.StudentID = generateStudentID()
 			}
 		}
+		// Set default institution_id if not set and user is representative
+		if user.Role == "institution_representative" && user.InstitutionID == "" {
+			user.InstitutionID = "NTUA"
+		}
 		database.DB.Save(&user)
 		// Only use student_id if user is a student
 		if user.Role == "student" {
 			studentID = user.StudentID
 		}
+		// Set institution_id for representatives
+		if user.Role == "institution_representative" {
+			institutionID = user.InstitutionID
+		}
 	}
 
-	// Generate JWT with student_id only for students
+	// Generate JWT with student_id only for students and institution_id for representatives
 	userIDStr := strconv.Itoa(int(user.ID))
-	jwtToken, err := utils.GenerateJWT(userIDStr, email, user.Role, studentID)
+	jwtToken, err := utils.GenerateJWT(userIDStr, email, user.Role, studentID, institutionID)
 	if err != nil {
 		http.Error(w, "Failed to generate JWT: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -180,9 +193,10 @@ func GoogleCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	upsertPayload := map[string]interface{}{
-		"username":   email, // Use email as username for Google users
-		"role":       user.Role,
-		"student_id": user.StudentID,
+		"username":       email, // Use email as username for Google users
+		"role":           user.Role,
+		"student_id":     user.StudentID,
+		"institution_id": user.InstitutionID, // Include institution_id
 	}
 
 	buf, _ := json.Marshal(upsertPayload)

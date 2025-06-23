@@ -6,19 +6,21 @@ import (
 
 // AuthInfo contains all user authentication information
 type AuthInfo struct {
-	UserID    string
-	Username  string
-	Role      string
-	StudentID string
+	UserID        string
+	Username      string
+	Role          string
+	StudentID     string
+	InstitutionID string // Add institution_id field
 }
 
 // GetAuthInfo extracts all authentication info from gin context
 func GetAuthInfo(c *gin.Context) AuthInfo {
 	return AuthInfo{
-		UserID:    getStringFromContext(c, "user_id"),
-		Username:  getStringFromContext(c, "username"),
-		Role:      getStringFromContext(c, "role"),
-		StudentID: getStringFromContext(c, "student_id"),
+		UserID:        getStringFromContext(c, "user_id"),
+		Username:      getStringFromContext(c, "username"),
+		Role:          getStringFromContext(c, "role"),
+		StudentID:     getStringFromContext(c, "student_id"),
+		InstitutionID: getStringFromContext(c, "institution_id"), // Include institution_id
 	}
 }
 
@@ -57,6 +59,48 @@ func RequireStudentWithID() gin.HandlerFunc {
 		}
 		if GetStudentID(c) == "" {
 			c.JSON(400, gin.H{"error": "Student ID is required"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// GetInstitutionID returns the institution ID if user is an institution representative
+func GetInstitutionID(c *gin.Context) string {
+	if getStringFromContext(c, "role") == "institution_representative" {
+		return getStringFromContext(c, "institution_id")
+	}
+	return ""
+}
+
+// IsInstitutionRepresentative checks if the current user is an institution representative
+func IsInstitutionRepresentative(c *gin.Context) bool {
+	return getStringFromContext(c, "role") == "institution_representative"
+}
+
+// RequireInstitutionRepresentative middleware that ensures only institution representatives can access
+func RequireInstitutionRepresentative() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !IsInstitutionRepresentative(c) {
+			c.JSON(403, gin.H{"error": "Access restricted to institution representatives only"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// RequireInstitutionRepresentativeWithID middleware that ensures representative has a valid institution_id
+func RequireInstitutionRepresentativeWithID() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !IsInstitutionRepresentative(c) {
+			c.JSON(403, gin.H{"error": "Access restricted to institution representatives only"})
+			c.Abort()
+			return
+		}
+		if GetInstitutionID(c) == "" {
+			c.JSON(400, gin.H{"error": "Institution ID is required"})
 			c.Abort()
 			return
 		}
