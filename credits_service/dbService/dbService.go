@@ -90,7 +90,7 @@ func Diminish(inst_name string, credits int) (bool, error) {
 	return true, nil
 }
 
-func BuyCredits(inst_name string, credits int) (bool, error) {
+func BuyCredits(instName string, credits int) (bool, error) {
 	ctx := context.Background()
 
 	tx, err := Pool.Begin(ctx)
@@ -98,14 +98,17 @@ func BuyCredits(inst_name string, credits int) (bool, error) {
 		log.Printf("Failed to begin transaction: %v", err)
 		return false, err
 	}
-	defer tx.Rollback(ctx) // Safely rollback if anything fails
+	defer tx.Rollback(ctx) // rollback on any failure
 
-	insertQuery := `UPDATE credits_inst SET credits = credits + $1 WHERE name = $2`
-
-	_, err = tx.Exec(ctx, insertQuery, credits, inst_name)
-
-	if err != nil {
-		log.Printf("Failed to make the purchase: %v", err)
+	// Upsert: insert new row or update existing one by adding credits
+	upsertQuery := `
+        INSERT INTO credits_inst (name, credits)
+        VALUES ($1, $2)
+        ON CONFLICT (name)
+        DO UPDATE SET credits = credits_inst.credits + EXCLUDED.credits
+    `
+	if _, err := tx.Exec(ctx, upsertQuery, instName, credits); err != nil {
+		log.Printf("Failed to upsert credits: %v", err)
 		return false, err
 	}
 
@@ -115,7 +118,6 @@ func BuyCredits(inst_name string, credits int) (bool, error) {
 	}
 
 	return true, nil
-
 }
 
 func AvailableCredits(instName string) (int, error) {
@@ -126,12 +128,26 @@ func AvailableCredits(instName string) (int, error) {
         FROM credits_inst
         WHERE name = $1
     `
+
 	var current int
 	err := Pool.QueryRow(ctx, qry, instName).Scan(&current)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return 0, fmt.Errorf("institution %q not found", instName)
+			log.Printf("Institution %q not found, inserting with 0 credits", instName)
+
+			insertQry := `
+                INSERT INTO credits_inst (name, credits)
+                VALUES ($1, 0)
+            `
+			_, insertErr := Pool.Exec(ctx, insertQry, instName)
+			if insertErr != nil {
+				log.Printf("Failed to insert new institution %q: %v", instName, insertErr)
+				return 0, insertErr
+			}
+
+			return 0, nil
 		}
+
 		log.Printf("Failed to query available credits for %q: %v", instName, err)
 		return 0, err
 	}
